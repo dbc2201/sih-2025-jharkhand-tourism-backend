@@ -1,19 +1,23 @@
 {
 	"name": "sih-2025-jharkhand-tourism-backend",
-	"version": "0.0.0",
-	"description": "",
-	"main": "dist/index.js",
+	"version": "0.1.0",
+	"description": "RESTful API backend for Jharkhand Tourism (JharkhandYatra)",
+	"main": "dist/server.js",
 	"scripts": {
 		"build": "tsc",
-		"dev": "node --watch --env-file=.env --import=tsx src/server.ts"
+		"start": "node dist/server.js",
+		"dev": "node --watch --env-file=.env --import=tsx src/server.ts",
+		"version:major": "npm version major --no-git-tag-version",
+		"version:minor": "npm version minor --no-git-tag-version",
+		"version:patch": "npm version patch --no-git-tag-version"
 	},
 	"dependencies": {
-		"@types/express": "^5.0.6",
-		"@types/node": "^25.0.3",
 		"express": "^5.2.1",
 		"tsx": "^4.21.0"
 	},
 	"devDependencies": {
+		"@types/express": "^5.0.6",
+		"@types/node": "^25.0.3",
 		"typescript": "^5.5.3"
 	},
 	"private": true
