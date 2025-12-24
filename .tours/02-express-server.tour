@@ -1,0 +1,91 @@
+{
+  "$schema": "https://aka.ms/codetour-schema",
+  "title": "02. Express Server Setup",
+  "description": "Learn how the Express.js server is configured, middleware is applied, and the application starts up.",
+  "steps": [
+    {
+      "file": "src/server.ts",
+      "line": 1,
+      "title": "Server Entry Point",
+      "description": "## Express Server Setup\n\nThis tour will walk you through how the Express server is configured.\n\n### What we'll cover:\n1. Importing dependencies\n2. Creating the Express app\n3. Applying middleware\n4. Registering routes\n5. Error handling\n6. Database connection & startup\n\n**Let's dive in!**"
+    },
+    {
+      "file": "src/server.ts",
+      "line": 15,
+      "title": "Importing Dependencies",
+      "description": "## Import Statements\n\n```typescript\nimport express, { Request, Response, NextFunction } from 'express';\nimport swaggerUi from 'swagger-ui-express';\nimport { connectDB } from './config/database';\nimport { swaggerSpec } from './config/swagger';\nimport apiRouter from './routes';\n```\n\n### What we're importing:\n- `express` - The web framework\n- `Request, Response, NextFunction` - TypeScript types\n- `swaggerUi` - API documentation UI\n- `connectDB` - Database connection function\n- `apiRouter` - All API routes\n\n**TypeScript tip:** Import types explicitly for better code clarity!"
+    },
+    {
+      "file": "src/server.ts",
+      "line": 24,
+      "title": "Creating the Express App",
+      "description": "## The Express Application\n\n```typescript\nconst app = express();\n```\n\nThis creates an Express application instance.\n\n### Think of `app` as:\n- A container for middleware\n- A registry for routes\n- A configuration holder\n\n**All Express apps start with this single line!**"
+    },
+    {
+      "file": "src/server.ts",
+      "line": 29,
+      "title": "Port Configuration",
+      "description": "## Environment-Based Configuration\n\n```typescript\nconst PORT = process.env.PORT || 5000;\n```\n\n### Why use environment variables?\n- Different ports in different environments\n- No code changes needed for deployment\n- Keeps configuration flexible\n\n**12-Factor App principle:** Store config in the environment!"
+    },
+    {
+      "file": "src/server.ts",
+      "line": 39,
+      "title": "JSON Body Parser",
+      "description": "## Parsing JSON Requests\n\n```typescript\napp.use(express.json());\n```\n\n### What this does:\n- Parses incoming JSON request bodies\n- Makes data available on `req.body`\n- Required for POST/PUT/PATCH requests\n\n**Without this:** `req.body` would be `undefined`!"
+    },
+    {
+      "file": "src/server.ts",
+      "line": 45,
+      "title": "URL-Encoded Parser",
+      "description": "## Parsing Form Data\n\n```typescript\napp.use(express.urlencoded({ extended: true }));\n```\n\n### What this does:\n- Parses form submissions (`application/x-www-form-urlencoded`)\n- `extended: true` allows nested objects\n\n**Example:** HTML forms use this format by default."
+    },
+    {
+      "file": "src/server.ts",
+      "line": 56,
+      "title": "API Router Mount",
+      "description": "## Mounting Routes\n\n```typescript\napp.use('/api/v1', apiRouter);\n```\n\n### Route Prefixing:\n| Route in Router | Final URL |\n|-----------------|----------|\n| `/auth` | `/api/v1/auth` |\n| `/homestays` | `/api/v1/homestays` |\n| `/guides` | `/api/v1/guides` |\n\n**API Versioning:** The `/v1` prefix allows us to create `/v2` later without breaking existing clients!"
+    },
+    {
+      "file": "src/server.ts",
+      "line": 62,
+      "title": "Swagger Documentation",
+      "description": "## API Documentation UI\n\n```typescript\napp.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));\n```\n\n### What this provides:\n- Interactive API documentation\n- Try out endpoints in the browser\n- Auto-generated from code comments\n\n**Access at:** `http://localhost:PORT/api/docs`"
+    },
+    {
+      "file": "src/server.ts",
+      "line": 79,
+      "title": "404 Handler",
+      "description": "## Not Found Handler\n\n```typescript\napp.use((_req: Request, res: Response) => {\n  res.status(404).json({\n    success: false,\n    message: 'Endpoint not found'\n  });\n});\n```\n\n### Why this matters:\n- Catches requests to undefined routes\n- Returns consistent error format\n- Must be registered AFTER all routes\n\n**Order matters in Express!**"
+    },
+    {
+      "file": "src/server.ts",
+      "line": 125,
+      "title": "Global Error Handler",
+      "description": "## Centralized Error Handling\n\n```typescript\napp.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {\n  // Handle different error types\n});\n```\n\n### Key Points:\n- Must have **4 parameters** (err, req, res, next)\n- Catches all unhandled errors\n- Provides consistent error responses\n- Handles MongoDB-specific errors\n\n**Always have a global error handler!**"
+    },
+    {
+      "file": "src/server.ts",
+      "line": 129,
+      "title": "MongoDB Error Handling",
+      "description": "## Handling Database Errors\n\n### CastError (Invalid ObjectId):\n```typescript\nif (isCastError(err) && err.kind === 'ObjectId') {\n  res.status(400).json({ message: 'Invalid ID format' });\n}\n```\n\n### Duplicate Key Error:\n```typescript\nif (isMongoServerError(err) && err.code === 11000) {\n  res.status(409).json({ message: 'Duplicate value' });\n}\n```\n\n**User-friendly errors:** Don't expose internal database errors!"
+    },
+    {
+      "file": "src/server.ts",
+      "line": 175,
+      "title": "Server Startup Function",
+      "description": "## Async Server Startup\n\n```typescript\nasync function startServer(): Promise<void> {\n  try {\n    await connectDB();  // Connect to MongoDB first\n    app.listen(PORT);   // Then start the server\n  } catch (error) {\n    process.exit(1);    // Exit if connection fails\n  }\n}\n```\n\n### Startup Order:\n1. Connect to database\n2. If successful, start HTTP server\n3. If failed, exit with error code\n\n**Fail fast:** Don't serve requests without a database!"
+    },
+    {
+      "file": "src/server.ts",
+      "line": 181,
+      "title": "Starting the HTTP Server",
+      "description": "## Listening for Connections\n\n```typescript\napp.listen(PORT, () => {\n  console.log(`Server running on port ${PORT}`);\n});\n```\n\n### What happens:\n1. Server binds to the port\n2. Starts accepting TCP connections\n3. Callback logs success\n\n**Your API is now live!**"
+    },
+    {
+      "file": "src/server.ts",
+      "line": 211,
+      "title": "Invoking Startup",
+      "description": "## Starting Everything\n\n```typescript\nstartServer();\n```\n\nThis single line kicks off the entire application!\n\n### Complete startup flow:\n1. `startServer()` is called\n2. `connectDB()` connects to MongoDB\n3. `app.listen()` starts the HTTP server\n4. API is ready to handle requests\n\n---\n\n## 🎉 Tour Complete!\n\nYou now understand the Express server setup from start to finish!"
+    }
+  ]
+}

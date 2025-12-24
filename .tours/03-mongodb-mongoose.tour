@@ -1,0 +1,91 @@
+{
+  "$schema": "https://aka.ms/codetour-schema",
+  "title": "03. MongoDB & Mongoose",
+  "description": "Learn how MongoDB is configured and how Mongoose models define the data structure.",
+  "steps": [
+    {
+      "file": "src/config/database.ts",
+      "line": 1,
+      "title": "Database Configuration",
+      "description": "## MongoDB Connection Setup\n\nThis tour covers how we connect to MongoDB using Mongoose.\n\n### What you'll learn:\n- Connection configuration\n- Environment variables\n- Error handling\n- Connection events\n\n**Mongoose is an ODM (Object Document Mapper) for MongoDB.**"
+    },
+    {
+      "file": "src/config/database.ts",
+      "line": 10,
+      "title": "Connection Function",
+      "description": "## The connectDB Function\n\n```typescript\nexport async function connectDB(): Promise<void> {\n  const uri = process.env.MONGO_URI;\n  await mongoose.connect(uri);\n}\n```\n\n### Key Points:\n- Uses `async/await` for clean Promise handling\n- Connection string from environment variable\n- Throws error if connection fails\n\n**Never hardcode connection strings!**"
+    },
+    {
+      "file": "src/models/users/User.model.ts",
+      "line": 1,
+      "title": "Mongoose Model Structure",
+      "description": "## Anatomy of a Mongoose Model\n\nEvery Mongoose model has these parts:\n\n1. **Interface** - TypeScript types for the document\n2. **Schema** - Defines document structure\n3. **Methods** - Instance methods on documents\n4. **Statics** - Model-level methods\n5. **Hooks** - Pre/post middleware\n6. **Model** - The exported model class\n\n**Let's explore each part!**"
+    },
+    {
+      "file": "src/models/users/User.model.ts",
+      "line": 19,
+      "title": "TypeScript Interface",
+      "description": "## Document Interface\n\n```typescript\nexport interface IUser {\n  email: string;\n  password: string;\n  name: string;\n  role: UserRole;\n  isActive: boolean;\n  lastLogin?: Date;\n  createdAt: Date;\n  updatedAt: Date;\n}\n```\n\n### Why interfaces?\n- Type safety at compile time\n- IntelliSense/autocomplete\n- Self-documenting code\n\n**Mongoose + TypeScript = Fewer runtime errors!**"
+    },
+    {
+      "file": "src/models/users/User.model.ts",
+      "line": 33,
+      "title": "Document Interface with Methods",
+      "description": "## Extended Document Interface\n\n```typescript\nexport interface IUserDocument extends IUser, Document {\n  comparePassword(candidatePassword: string): Promise<boolean>;\n}\n```\n\n### What this does:\n- Extends the base `IUser` interface\n- Extends Mongoose's `Document` type\n- Adds instance methods like `comparePassword`\n\n**This enables:** `user.comparePassword('password')`"
+    },
+    {
+      "file": "src/models/users/User.model.ts",
+      "line": 47,
+      "title": "Schema Definition",
+      "description": "## Mongoose Schema\n\n```typescript\nconst userSchema = new Schema<IUserDocument>(\n  {\n    email: {\n      type: String,\n      required: [true, 'Email is required'],\n      unique: true,\n      lowercase: true,\n      trim: true,\n      match: [/^\\S+@\\S+\\.\\S+$/, 'Invalid email']\n    },\n    // ... more fields\n  },\n  { timestamps: true }\n);\n```\n\n### Schema Options:\n- `required` - Field must have a value\n- `unique` - No duplicates allowed\n- `lowercase` - Auto-convert to lowercase\n- `trim` - Remove whitespace\n- `match` - Regex validation"
+    },
+    {
+      "file": "src/models/users/User.model.ts",
+      "line": 61,
+      "title": "Password Security",
+      "description": "## Hiding Sensitive Fields\n\n```typescript\npassword: {\n  type: String,\n  required: true,\n  minlength: 8,\n  select: false  // <-- Important!\n}\n```\n\n### What `select: false` does:\n- Password excluded from queries by default\n- Must explicitly request: `.select('+password')`\n- Prevents accidental exposure\n\n**Security best practice:** Never return passwords in responses!"
+    },
+    {
+      "file": "src/models/users/User.model.ts",
+      "line": 83,
+      "title": "Schema Options",
+      "description": "## Additional Schema Options\n\n```typescript\n{\n  timestamps: true,\n  collection: 'users'\n}\n```\n\n### Options explained:\n- `timestamps: true` - Auto-add `createdAt` and `updatedAt`\n- `collection: 'users'` - Explicit collection name\n\n**Without `collection`:** Mongoose would use 'userdocuments' (pluralized)"
+    },
+    {
+      "file": "src/models/users/User.model.ts",
+      "line": 90,
+      "title": "Database Indexes",
+      "description": "## Creating Indexes\n\n```typescript\nuserSchema.index({ email: 1 }, { unique: true });\nuserSchema.index({ role: 1 });\n```\n\n### Why indexes matter:\n- Faster queries on indexed fields\n- `{ unique: true }` enforces uniqueness\n- `1` = ascending, `-1` = descending\n\n**Performance tip:** Index fields you query frequently!"
+    },
+    {
+      "file": "src/models/users/User.model.ts",
+      "line": 96,
+      "title": "Pre-save Hook",
+      "description": "## Mongoose Middleware (Hooks)\n\n```typescript\nuserSchema.pre('save', async function () {\n  if (!this.isModified('password')) return;\n  \n  const salt = await bcrypt.genSalt(12);\n  this.password = await bcrypt.hash(this.password, salt);\n});\n```\n\n### What this does:\n- Runs BEFORE every `save()` operation\n- Only hashes if password changed\n- Uses bcrypt for secure hashing\n\n**Magic:** Password is automatically hashed on save!"
+    },
+    {
+      "file": "src/models/users/User.model.ts",
+      "line": 113,
+      "title": "Instance Methods",
+      "description": "## Adding Document Methods\n\n```typescript\nuserSchema.methods.comparePassword = async function(\n  candidatePassword: string\n): Promise<boolean> {\n  return bcrypt.compare(candidatePassword, this.password);\n};\n```\n\n### Usage:\n```typescript\nconst user = await UserModel.findById(id);\nconst isValid = await user.comparePassword('password123');\n```\n\n**Methods are called on document instances!**"
+    },
+    {
+      "file": "src/models/users/User.model.ts",
+      "line": 125,
+      "title": "Static Methods",
+      "description": "## Model-Level Methods\n\n```typescript\nuserSchema.statics.findByEmail = function(\n  email: string\n): Promise<IUserDocument | null> {\n  return this.findOne({ email }).select('+password');\n};\n```\n\n### Usage:\n```typescript\nconst user = await UserModel.findByEmail('test@example.com');\n```\n\n### Difference from instance methods:\n- **Instance methods:** Called on documents (`user.comparePassword`)\n- **Static methods:** Called on model (`UserModel.findByEmail`)"
+    },
+    {
+      "file": "src/models/users/User.model.ts",
+      "line": 134,
+      "title": "Creating the Model",
+      "description": "## Exporting the Model\n\n```typescript\nexport const UserModel: IUserModel = mongoose.model<IUserDocument, IUserModel>(\n  'User',\n  userSchema\n);\n```\n\n### Parameters:\n1. `'User'` - Model name (used for references)\n2. `userSchema` - The schema we defined\n\n### Type parameters:\n- `IUserDocument` - Document type\n- `IUserModel` - Model type (with statics)"
+    },
+    {
+      "file": "src/models/users/User.model.ts",
+      "line": 167,
+      "title": "Response Transformation",
+      "description": "## Safe Response Helper\n\n```typescript\nexport function toUserResponse(user: IUserDocument): UserResponse {\n  return {\n    id: user._id.toString(),\n    email: user.email,\n    name: user.name,\n    role: user.role,\n    isActive: user.isActive,\n    createdAt: user.createdAt\n  };\n}\n```\n\n### Why use this?\n- Excludes sensitive fields (password)\n- Converts `_id` to string\n- Consistent response format\n\n---\n\n## 🎉 Tour Complete!\n\nYou now understand Mongoose models, schemas, and methods!"
+    }
+  ]
+}

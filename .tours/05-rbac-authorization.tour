@@ -1,0 +1,49 @@
+{
+  "$schema": "https://aka.ms/codetour-schema",
+  "title": "05. Role-Based Access Control (RBAC)",
+  "description": "Learn how authorization works with roles and permissions.",
+  "steps": [
+    {
+      "file": "src/middleware/rbac.middleware.ts",
+      "line": 1,
+      "title": "What is RBAC?",
+      "description": "## Role-Based Access Control\n\n**Authentication** = Who are you?\n**Authorization** = What can you do?\n\n### RBAC Concepts:\n- **Roles** - Groups with shared permissions (admin, host, guide, customer)\n- **Permissions** - Specific actions (create, read, update, delete)\n- **Resources** - Things you can act on (homestay, booking, profile)\n\n**This tour covers authorization - controlling access based on roles.**"
+    },
+    {
+      "file": "src/middleware/rbac.middleware.ts",
+      "line": 17,
+      "title": "Permission Definitions",
+      "description": "## Role-Permission Mapping\n\n```typescript\nconst rolePermissions: Record<UserRole, string[]> = {\n  admin: ['*'],  // Full access\n  \n  host: [\n    'homestay:create',\n    'homestay:read',\n    'homestay:update',\n    'homestay:delete',\n    'booking:read',\n    // ...\n  ],\n  \n  guide: [\n    'guide:read',\n    'guide:update',\n    'booking:read',\n    // ...\n  ],\n  \n  customer: [\n    'homestay:read',\n    'booking:create',\n    'booking:cancel',\n    // ...\n  ]\n};\n```\n\n### Permission format: `resource:action`"
+    },
+    {
+      "file": "src/middleware/rbac.middleware.ts",
+      "line": 59,
+      "title": "Permission Check Function",
+      "description": "## Checking Permissions\n\n```typescript\nfunction hasPermission(role: UserRole, permission: string): boolean {\n  const permissions = rolePermissions[role];\n  \n  if (!permissions) return false;\n  \n  // Admin has all permissions\n  if (permissions.includes('*')) return true;\n  \n  return permissions.includes(permission);\n}\n```\n\n### How it works:\n1. Get permissions for the role\n2. Check for wildcard (`*`) = admin\n3. Check if specific permission exists\n\n**Admins can do everything!**"
+    },
+    {
+      "file": "src/middleware/rbac.middleware.ts",
+      "line": 88,
+      "title": "Permission Middleware",
+      "description": "## Requiring Permissions\n\n```typescript\nexport function requirePermission(...permissions: string[]) {\n  return (req, res, next) => {\n    if (!req.user) {\n      return sendError(res, 'Authentication required', 401);\n    }\n    \n    const userRole = req.user.role;\n    const hasAll = permissions.every(p => hasPermission(userRole, p));\n    \n    if (!hasAll) {\n      return sendError(res, 'Insufficient permissions', 403);\n    }\n    \n    next();\n  };\n}\n```\n\n### Usage:\n```typescript\nrouter.post('/', authenticate, requirePermission('homestay:create'), create);\n```"
+    },
+    {
+      "file": "src/middleware/rbac.middleware.ts",
+      "line": 130,
+      "title": "Role Middleware",
+      "description": "## Requiring Specific Roles\n\n```typescript\nexport function requireRole(...roles: UserRole[]) {\n  return (req, res, next) => {\n    if (!req.user) {\n      return sendError(res, 'Authentication required', 401);\n    }\n    \n    const userRole = req.user.role;\n    \n    if (!roles.includes(userRole)) {\n      return sendError(res, 'Access denied', 403);\n    }\n    \n    next();\n  };\n}\n```\n\n### Usage:\n```typescript\n// Only admins can access\nrouter.get('/admin', authenticate, requireRole('admin'), adminDashboard);\n\n// Admins or hosts can access\nrouter.post('/', authenticate, requireRole('admin', 'host'), createListing);\n```"
+    },
+    {
+      "file": "src/middleware/rbac.middleware.ts",
+      "line": 171,
+      "title": "Ownership Middleware",
+      "description": "## Resource Ownership Checks\n\n```typescript\nexport function requireOwnership(\n  getUserIdFromResource: (req: Request) => Promise<string | undefined>\n) {\n  return async (req, res, next) => {\n    // Admins bypass ownership check\n    if (req.user.role === 'admin') {\n      return next();\n    }\n    \n    const resourceOwnerId = await getUserIdFromResource(req);\n    \n    if (resourceOwnerId !== req.user.userId) {\n      return sendError(res, 'Access denied - not owner', 403);\n    }\n    \n    next();\n  };\n}\n```\n\n### Usage:\n```typescript\nrouter.put('/:id',\n  authenticate,\n  requireOwnership(async (req) => {\n    const booking = await BookingModel.findById(req.params.id);\n    return booking?.userId?.toString();\n  }),\n  updateBooking\n);\n```\n\n**Users can only modify their own resources!**"
+    },
+    {
+      "file": "src/middleware/rbac.middleware.ts",
+      "line": 215,
+      "title": "Helper Functions",
+      "description": "## Utility Functions\n\n```typescript\n// Get all permissions for a role\nexport function getPermissionsForRole(role: UserRole): string[] {\n  return rolePermissions[role] || [];\n}\n\n// Validate if a string is a valid role\nexport function isValidRole(role: string): role is UserRole {\n  return ['admin', 'host', 'guide', 'customer'].includes(role);\n}\n```\n\n### Use cases:\n- Display user's permissions in UI\n- Validate role during registration\n- Debug permission issues\n\n---\n\n## 🎉 Tour Complete!\n\nYou now understand how RBAC protects resources based on user roles!"
+    }
+  ]
+}

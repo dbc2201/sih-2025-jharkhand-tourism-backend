@@ -1,0 +1,67 @@
+{
+  "$schema": "https://aka.ms/codetour-schema",
+  "title": "04. JWT Authentication",
+  "description": "Learn how JWT-based authentication works - from registration to protected routes.",
+  "steps": [
+    {
+      "file": "src/routes/auth/Auth.route.ts",
+      "line": 1,
+      "title": "Authentication Routes",
+      "description": "## JWT Authentication System\n\nThis tour covers the complete authentication flow.\n\n### What you'll learn:\n- User registration\n- User login\n- JWT token generation\n- Protected routes\n- Password hashing with bcrypt\n\n**Authentication = Verifying WHO the user is.**"
+    },
+    {
+      "file": "src/routes/auth/Auth.route.ts",
+      "line": 36,
+      "title": "Register Route",
+      "description": "## User Registration\n\n```typescript\nrouter.post('/register', validate(registerSchema), register);\n```\n\n### Flow:\n1. Request comes in with email, password, name\n2. `validate(registerSchema)` checks the data\n3. `register` controller creates the user\n4. Returns user data + JWT token\n\n**New users get a token immediately after registration!**"
+    },
+    {
+      "file": "src/routes/auth/Auth.route.ts",
+      "line": 44,
+      "title": "Login Route",
+      "description": "## User Login\n\n```typescript\nrouter.post('/login', validate(loginSchema), login);\n```\n\n### Flow:\n1. User sends email + password\n2. Find user by email\n3. Compare password with bcrypt\n4. Generate JWT token\n5. Return token to client\n\n**The token is like a temporary ID card!**"
+    },
+    {
+      "file": "src/routes/auth/Auth.route.ts",
+      "line": 51,
+      "title": "Protected Route",
+      "description": "## Protecting Routes\n\n```typescript\nrouter.get('/me', authenticate, getProfile);\n```\n\n### The `authenticate` middleware:\n- Checks for `Authorization: Bearer <token>` header\n- Verifies the JWT token\n- Attaches user info to `req.user`\n- If invalid, returns 401 Unauthorized\n\n**Order matters:** `authenticate` runs BEFORE `getProfile`!"
+    },
+    {
+      "file": "src/controllers/auth.controller.ts",
+      "line": 100,
+      "title": "Register Controller",
+      "description": "## Registration Logic\n\n```typescript\nexport async function register(req: Request, res: Response) {\n  const { email, password, name, role } = req.body;\n  \n  // Check if email exists\n  const existingUser = await UserModel.findOne({ email });\n  if (existingUser) {\n    return sendError(res, 'Email already registered', 409);\n  }\n  \n  // Create new user\n  const user = new UserModel({ email, password, name, role });\n  await user.save();\n  \n  // Generate token\n  const token = generateToken(user._id, user.role);\n  \n  sendSuccess(res, { user: toUserResponse(user), token }, 201);\n}\n```\n\n**Note:** Password is hashed automatically by the pre-save hook!"
+    },
+    {
+      "file": "src/controllers/auth.controller.ts",
+      "line": 251,
+      "title": "Login Controller",
+      "description": "## Login Logic\n\n```typescript\nexport async function login(req: Request, res: Response) {\n  const { email, password } = req.body;\n  \n  // Find user with password field\n  const user = await UserModel.findByEmail(email);\n  if (!user) {\n    return sendError(res, 'Invalid credentials', 401);\n  }\n  \n  // Verify password\n  const isMatch = await user.comparePassword(password);\n  if (!isMatch) {\n    return sendError(res, 'Invalid credentials', 401);\n  }\n  \n  // Update last login\n  user.lastLogin = new Date();\n  await user.save();\n  \n  // Generate and return token\n  const token = generateToken(user._id, user.role);\n  sendSuccess(res, { user: toUserResponse(user), token });\n}\n```\n\n**Security:** Never reveal if email exists - always say 'Invalid credentials'!"
+    },
+    {
+      "file": "src/middleware/auth.middleware.ts",
+      "line": 35,
+      "title": "Authentication Middleware",
+      "description": "## JWT Verification\n\n```typescript\nexport function authenticate(req, res, next) {\n  const authHeader = req.headers.authorization;\n  \n  // Check for Bearer token\n  if (!authHeader || !authHeader.startsWith('Bearer ')) {\n    return sendError(res, 'Authentication required', 401);\n  }\n  \n  // Extract and verify token\n  const token = authHeader.split(' ')[1];\n  const decoded = jwt.verify(token, JWT_SECRET);\n  \n  // Attach user to request\n  req.user = decoded;\n  next();\n}\n```\n\n### Request header format:\n```\nAuthorization: Bearer eyJhbGciOiJIUzI1NiIs...\n```"
+    },
+    {
+      "file": "src/middleware/auth.middleware.ts",
+      "line": 115,
+      "title": "Token Generation",
+      "description": "## Creating JWT Tokens\n\n```typescript\nexport function generateToken(userId: string, role: string): string {\n  const expiresIn = process.env.JWT_EXPIRES_IN || '7d';\n  \n  return jwt.sign(\n    { userId, role },\n    JWT_SECRET,\n    { expiresIn }\n  );\n}\n```\n\n### Token Payload:\n```json\n{\n  \"userId\": \"507f1f77bcf86cd799439011\",\n  \"role\": \"customer\",\n  \"iat\": 1703000000,\n  \"exp\": 1703604800\n}\n```\n\n**The token contains:** User ID, role, issued time, expiration time."
+    },
+    {
+      "file": "src/middleware/auth.middleware.ts",
+      "line": 62,
+      "title": "Error Handling",
+      "description": "## JWT Error Types\n\n```typescript\ncatch (error) {\n  if (error instanceof jwt.TokenExpiredError) {\n    sendError(res, 'Token expired', 401);\n  }\n  \n  if (error instanceof jwt.JsonWebTokenError) {\n    sendError(res, 'Invalid token', 401);\n  }\n}\n```\n\n### Common JWT errors:\n| Error | Meaning |\n|-------|--------|\n| `TokenExpiredError` | Token past expiration |\n| `JsonWebTokenError` | Token malformed/invalid |\n| `NotBeforeError` | Token not yet valid |\n\n**Always handle JWT errors gracefully!**"
+    },
+    {
+      "file": "src/middleware/auth.middleware.ts",
+      "line": 84,
+      "title": "Optional Authentication",
+      "description": "## Optional Auth Middleware\n\n```typescript\nexport function optionalAuth(req, res, next) {\n  try {\n    const authHeader = req.headers.authorization;\n    if (authHeader && authHeader.startsWith('Bearer ')) {\n      const token = authHeader.split(' ')[1];\n      const decoded = jwt.verify(token, JWT_SECRET);\n      req.user = decoded;\n    }\n    next();  // Continue even without token\n  } catch {\n    next();  // Ignore invalid tokens\n  }\n}\n```\n\n### Use cases:\n- Show personalized content if logged in\n- Different behavior for guests vs users\n- Public routes with optional user context\n\n---\n\n## 🎉 Tour Complete!\n\nYou now understand JWT authentication from end to end!"
+    }
+  ]
+}

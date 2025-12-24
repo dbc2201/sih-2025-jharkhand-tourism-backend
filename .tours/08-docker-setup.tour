@@ -1,0 +1,67 @@
+{
+  "$schema": "https://aka.ms/codetour-schema",
+  "title": "08. Docker Development Setup",
+  "description": "Learn how Docker Compose simplifies local development with MongoDB.",
+  "steps": [
+    {
+      "file": "docker-compose.yml",
+      "line": 1,
+      "title": "What is Docker Compose?",
+      "description": "## Docker Compose\n\nDocker Compose lets you define and run multi-container applications.\n\n### Benefits:\n- Consistent development environment\n- No local MongoDB installation needed\n- Easy to share with team\n- One command to start everything\n\n**Perfect for:** Running MongoDB without installing it locally!"
+    },
+    {
+      "file": "docker-compose.yml",
+      "line": 4,
+      "title": "MongoDB Service",
+      "description": "## Defining the MongoDB Container\n\n```yaml\nservices:\n  mongodb:\n    image: mongo:7\n    container_name: jharkhand-tourism-mongodb\n```\n\n### What this means:\n- `image: mongo:7` - Use official MongoDB 7 image\n- `container_name` - Name for easy reference\n\n**Docker Hub:** Images are pulled from hub.docker.com"
+    },
+    {
+      "file": "docker-compose.yml",
+      "line": 8,
+      "title": "Environment Variables",
+      "description": "## Container Configuration\n\n```yaml\nenvironment:\n  MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USERNAME:-admin}\n  MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD:-password123}\n  MONGO_INITDB_DATABASE: ${MONGO_DATABASE:-sih-2025-jharkhand-tourism}\n```\n\n### Syntax explained:\n- `${VAR:-default}` - Use env var or default value\n- These set up MongoDB authentication\n- Creates initial database\n\n**Security:** Change these in production!"
+    },
+    {
+      "file": "docker-compose.yml",
+      "line": 13,
+      "title": "Port Mapping",
+      "description": "## Exposing Ports\n\n```yaml\nports:\n  - \"${MONGO_PORT:-27017}:27017\"\n```\n\n### Format: `host:container`\n- Left side: Port on YOUR machine\n- Right side: Port inside container\n\n### Result:\n`localhost:27017` → MongoDB in container\n\n**You connect to localhost, Docker routes to container!**"
+    },
+    {
+      "file": "docker-compose.yml",
+      "line": 14,
+      "title": "Data Persistence",
+      "description": "## Volumes for Data\n\n```yaml\nvolumes:\n  - mongodb_data:/data/db\n  - ./docker/mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro\n```\n\n### Two types of mounts:\n\n1. **Named volume** (`mongodb_data:/data/db`)\n   - Persists data between container restarts\n   - Managed by Docker\n\n2. **Bind mount** (`./docker/mongo-init.js:...`)\n   - Maps local file into container\n   - `:ro` = read-only\n\n**Without volumes:** Data is lost when container stops!"
+    },
+    {
+      "file": "docker/mongo-init.js",
+      "line": 1,
+      "title": "Database Initialization",
+      "description": "## MongoDB Init Script\n\nThis script runs when the container starts for the first time.\n\n```javascript\n// Create application database user\ndb.createUser({\n  user: 'app_user',\n  pwd: 'app_password',\n  roles: [\n    { role: 'readWrite', db: 'sih-2025-jharkhand-tourism' }\n  ]\n});\n\n// Create initial collections\ndb.createCollection('users');\ndb.createCollection('homestays');\n// ...\n```\n\n### What this does:\n- Creates application user (not root)\n- Sets up collections\n- Configures indexes\n\n**Principle of least privilege:** App uses limited user, not admin!"
+    },
+    {
+      "file": "docker-compose.yml",
+      "line": 19,
+      "title": "Health Checks",
+      "description": "## Container Health Monitoring\n\n```yaml\nhealthcheck:\n  test: [\"CMD\", \"mongosh\", \"--eval\", \"db.adminCommand('ping')\"]\n  interval: 10s\n  timeout: 5s\n  retries: 5\n  start_period: 30s\n```\n\n### What this does:\n- Runs `db.adminCommand('ping')` every 10 seconds\n- Waits 30 seconds before first check\n- Marks unhealthy after 5 failures\n\n**Why it matters:** Ensures MongoDB is actually ready, not just running."
+    },
+    {
+      "file": "docker-compose.yml",
+      "line": 26,
+      "title": "Volumes & Networks",
+      "description": "## Infrastructure Configuration\n\n```yaml\nvolumes:\n  mongodb_data:\n    driver: local\n\nnetworks:\n  backend-network:\n    driver: bridge\n```\n\n### Volumes:\n- Named volumes for persistent storage\n- Survives container deletion\n\n### Networks:\n- Isolated network for services\n- Containers can communicate by service name\n\n**Future:** Add API container to same network!"
+    },
+    {
+      "file": ".env.example",
+      "line": 14,
+      "title": "Connection String",
+      "description": "## Connecting Your App to Docker MongoDB\n\n```env\nMONGO_URI=mongodb://app_user:app_password@localhost:27017/sih-2025-jharkhand-tourism?authSource=sih-2025-jharkhand-tourism\n```\n\n### Breaking it down:\n- `mongodb://` - Protocol\n- `app_user:app_password` - Credentials\n- `localhost:27017` - Host and port\n- `/sih-2025-jharkhand-tourism` - Database name\n- `?authSource=...` - Database for authentication\n\n**Important:** User was created by mongo-init.js!"
+    },
+    {
+      "file": "docker-compose.yml",
+      "line": 1,
+      "title": "Docker Commands",
+      "description": "## Essential Docker Compose Commands\n\n```bash\n# Start containers (detached mode)\ndocker compose up -d\n\n# View running containers\ndocker compose ps\n\n# View logs\ndocker compose logs -f mongodb\n\n# Stop containers\ndocker compose down\n\n# Stop and remove volumes (fresh start)\ndocker compose down -v\n\n# Restart a service\ndocker compose restart mongodb\n```\n\n---\n\n## 🎉 Tour Complete!\n\nYou now understand how Docker Compose sets up your development database!"
+    }
+  ]
+}

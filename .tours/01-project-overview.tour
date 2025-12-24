@@ -1,0 +1,79 @@
+{
+  "$schema": "https://aka.ms/codetour-schema",
+  "title": "01. Project Overview - Getting Started",
+  "description": "A high-level tour of the JharkhandYatra Backend project structure and key files. Perfect for first-time explorers!",
+  "steps": [
+    {
+      "file": "package.json",
+      "line": 1,
+      "title": "Welcome to JharkhandYatra Backend!",
+      "description": "## Welcome! 👋\n\nThis is the **JharkhandYatra Backend API** - a RESTful API for managing eco and cultural tourism in Jharkhand.\n\n### What you'll learn in this project:\n- Express.js 5 with TypeScript\n- MongoDB with Mongoose ODM\n- JWT Authentication\n- Role-Based Access Control (RBAC)\n- Zod Validation\n- Docker for development\n\n**Let's start by exploring the project configuration!**"
+    },
+    {
+      "file": "package.json",
+      "line": 16,
+      "title": "Dependencies Overview",
+      "description": "## Core Dependencies\n\n| Package | Purpose |\n|---------|----------|\n| `express` | Web framework (v5!) |\n| `mongoose` | MongoDB ODM |\n| `bcrypt` | Password hashing |\n| `jsonwebtoken` | JWT authentication |\n| `zod` | Schema validation |\n| `swagger-*` | API documentation |\n\n**Note:** We're using Express 5.x which has built-in Promise support!"
+    },
+    {
+      "file": "package.json",
+      "line": 9,
+      "title": "NPM Scripts",
+      "description": "## Available Scripts\n\n```bash\nnpm run dev      # Start development server with hot reload\nnpm run build    # Compile TypeScript\nnpm start        # Run production server\nnpm run test:api # Run API tests with Newman\n```\n\nThe `dev` script uses Node's built-in `--watch` flag for hot reloading and `tsx` for TypeScript execution."
+    },
+    {
+      "file": "src/server.ts",
+      "line": 1,
+      "title": "Application Entry Point",
+      "description": "## The Heart of Our Application\n\nThis is `server.ts` - where everything begins!\n\n### What happens here:\n1. Import Express and middleware\n2. Configure the app\n3. Connect to MongoDB\n4. Register routes\n5. Start listening for requests\n\n**This file orchestrates the entire application startup.**"
+    },
+    {
+      "file": "src/config/database.ts",
+      "line": 1,
+      "title": "Database Configuration",
+      "description": "## MongoDB Connection\n\nThis file handles connecting to MongoDB using Mongoose.\n\n### Key concepts:\n- Connection string from environment variables\n- Connection options for production readiness\n- Error handling for connection failures\n\n**Always keep sensitive data like connection strings in `.env` files!**"
+    },
+    {
+      "file": "src/routes/index.ts",
+      "line": 1,
+      "title": "Route Aggregator",
+      "description": "## Central Route Registry\n\nThis file imports and registers all route modules:\n\n```\n/api/v1/auth      → Authentication\n/api/v1/homestays → Homestay listings\n/api/v1/guides    → Tour guides\n/api/v1/products  → Handicrafts\n/api/v1/bookings  → Reservations\n/api/v1/search    → Unified search\n```\n\n**Pattern:** Keep routes modular and import them into a central registry."
+    },
+    {
+      "file": "src/models/users/User.model.ts",
+      "line": 1,
+      "title": "Mongoose Models",
+      "description": "## Data Models\n\nModels define the structure of our MongoDB documents.\n\n### Project Models:\n- `User` - Authentication & profiles\n- `Homestay` - Accommodation listings\n- `Guide` - Tour guide profiles\n- `Product` - Handicraft products\n- `Booking` - Reservations\n- `Counter` - Auto-increment sequences\n\n**Each model has its own folder in `src/models/`**"
+    },
+    {
+      "file": "src/controllers/auth.controller.ts",
+      "line": 1,
+      "title": "Controllers",
+      "description": "## Request Handlers\n\nControllers contain the business logic for handling HTTP requests.\n\n### Responsibilities:\n1. Receive request data\n2. Validate input (done by middleware)\n3. Interact with models\n4. Send responses\n\n**Controllers should be thin - move complex logic to services!**"
+    },
+    {
+      "file": "src/middleware/auth.middleware.ts",
+      "line": 1,
+      "title": "Middleware",
+      "description": "## Middleware Functions\n\nMiddleware processes requests before they reach controllers.\n\n### Our Middleware:\n- `auth.middleware.ts` - JWT verification\n- `rbac.middleware.ts` - Role-based access control\n- `validation.middleware.ts` - Zod schema validation\n\n**Middleware is the gatekeeper of your API!**"
+    },
+    {
+      "file": "src/validation/index.ts",
+      "line": 1,
+      "title": "Validation Schemas",
+      "description": "## Request Validation with Zod\n\nZod schemas define and validate the shape of incoming data.\n\n### Benefits:\n- Type-safe validation\n- Automatic TypeScript types\n- Clear error messages\n- Composable schemas\n\n**Always validate user input before processing!**"
+    },
+    {
+      "file": "src/utils/response.utils.ts",
+      "line": 1,
+      "title": "Utility Functions",
+      "description": "## Helper Functions\n\nUtilities provide consistent response formatting:\n\n```typescript\nsendSuccess(res, data, 200, 'Success!');\nsendError(res, 'Not found', 404);\n```\n\n**Consistent responses make your API predictable and easy to use!**"
+    },
+    {
+      "file": ".env.example",
+      "line": 1,
+      "title": "Environment Variables",
+      "description": "## Configuration Management\n\nEnvironment variables keep sensitive data out of code:\n\n- `PORT` - Server port\n- `MONGO_URI` - Database connection\n- `JWT_SECRET` - Token signing key\n- `BCRYPT_SALT_ROUNDS` - Password hashing strength\n\n**Never commit `.env` files to version control!**\n\n---\n\n## 🎉 Tour Complete!\n\nYou now have a high-level understanding of the project structure. Continue with the other tours to dive deeper into specific topics!"
+    }
+  ]
+}

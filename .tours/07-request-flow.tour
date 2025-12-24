@@ -1,0 +1,61 @@
+{
+  "$schema": "https://aka.ms/codetour-schema",
+  "title": "07. Complete Request Flow",
+  "description": "Follow a request from arrival to response - see how all the pieces fit together!",
+  "steps": [
+    {
+      "file": "src/server.ts",
+      "line": 56,
+      "title": "Request Arrives",
+      "description": "## The Journey Begins\n\nLet's follow a **POST /api/v1/auth/register** request through the entire system.\n\n```http\nPOST /api/v1/auth/register HTTP/1.1\nContent-Type: application/json\n\n{\n  \"email\": \"student@example.com\",\n  \"password\": \"securePass123\",\n  \"name\": \"Test Student\"\n}\n```\n\n### The request hits:\n```typescript\napp.use('/api/v1', apiRouter);\n```\n\n**Step 1:** Express matches `/api/v1` and forwards to `apiRouter`."
+    },
+    {
+      "file": "src/routes/index.ts",
+      "line": 1,
+      "title": "Route Aggregator",
+      "description": "## Route Distribution\n\nThe request path is now `/auth/register` (prefix stripped).\n\n```typescript\nrouter.use('/auth', authRoutes);\nrouter.use('/homestays', homestayRoutes);\nrouter.use('/guides', guideRoutes);\n// ...\n```\n\n**Step 2:** Matches `/auth` and forwards to `authRoutes`.\n\nRemaining path: `/register`"
+    },
+    {
+      "file": "src/routes/auth/Auth.route.ts",
+      "line": 36,
+      "title": "Route Handler",
+      "description": "## Matching the Specific Route\n\n```typescript\nrouter.post('/register', validate(registerSchema), register);\n```\n\n### This defines:\n- Method: `POST`\n- Path: `/register`\n- Middleware chain: `validate(registerSchema)` → `register`\n\n**Step 3:** Route matched! Now execute the middleware chain."
+    },
+    {
+      "file": "src/middleware/validation.middleware.ts",
+      "line": 15,
+      "title": "Validation Middleware",
+      "description": "## Validating Request Data\n\n```typescript\nexport function validate(schema) {\n  return (req, res, next) => {\n    const result = schema.safeParse({\n      body: req.body,\n      query: req.query,\n      params: req.params\n    });\n    \n    if (!result.success) {\n      return sendError(res, 'Validation failed', 400, errors);\n    }\n    \n    req.body = result.data.body;  // Use parsed data\n    next();  // Continue to next middleware\n  };\n}\n```\n\n**Step 4:** Validates the request body against `registerSchema`.\n\n✅ Valid → calls `next()` → proceeds to controller\n❌ Invalid → returns 400 error → chain stops"
+    },
+    {
+      "file": "src/controllers/auth.controller.ts",
+      "line": 100,
+      "title": "Controller Logic",
+      "description": "## Processing the Request\n\n```typescript\nexport async function register(req: Request, res: Response) {\n  // 1. Extract validated data\n  const { email, password, name, role } = req.body;\n  \n  // 2. Business logic - check for existing user\n  const existingUser = await UserModel.findOne({ email });\n  if (existingUser) {\n    return sendError(res, 'Email already registered', 409);\n  }\n  \n  // 3. Create new user\n  const user = new UserModel({ email, password, name, role });\n  await user.save();\n  \n  // 4. Generate JWT token\n  const token = generateToken(user._id, user.role);\n  \n  // 5. Send response\n  sendSuccess(res, { user: toUserResponse(user), token }, 201);\n}\n```\n\n**Step 5:** Controller executes business logic."
+    },
+    {
+      "file": "src/models/users/User.model.ts",
+      "line": 96,
+      "title": "Pre-save Hook",
+      "description": "## Automatic Password Hashing\n\nWhen `user.save()` is called:\n\n```typescript\nuserSchema.pre('save', async function () {\n  if (!this.isModified('password')) return;\n  \n  const salt = await bcrypt.genSalt(12);\n  this.password = await bcrypt.hash(this.password, salt);\n});\n```\n\n**Step 6:** Mongoose hook hashes the password before saving.\n\n- Plain: `securePass123`\n- Hashed: `$2b$12$K9GpZpYP...` (60 chars)"
+    },
+    {
+      "file": "src/middleware/auth.middleware.ts",
+      "line": 115,
+      "title": "Token Generation",
+      "description": "## Creating the JWT\n\n```typescript\nconst token = generateToken(user._id, user.role);\n\n// Inside generateToken:\nreturn jwt.sign(\n  { userId, role },\n  JWT_SECRET,\n  { expiresIn: '7d' }\n);\n```\n\n**Step 7:** JWT token is generated.\n\n```\neyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.\neyJ1c2VySWQiOiI1MDdmMWY3N2JjZjg2Y2Q3OTk0MzkwMTEiLCJyb2xlIjoiY3VzdG9tZXIifQ.\n2xGpYLbwW9w2Fk3NnB5RnF...\n```"
+    },
+    {
+      "file": "src/utils/response.utils.ts",
+      "line": 1,
+      "title": "Sending Response",
+      "description": "## Formatting the Response\n\n```typescript\nexport function sendSuccess(\n  res: Response,\n  data: any,\n  statusCode = 200,\n  message?: string\n) {\n  res.status(statusCode).json({\n    success: true,\n    data,\n    ...(message && { message })\n  });\n}\n```\n\n**Step 8:** Response is formatted and sent.\n\n```json\n{\n  \"success\": true,\n  \"data\": {\n    \"user\": {\n      \"id\": \"507f1f77bcf86cd799439011\",\n      \"email\": \"student@example.com\",\n      \"name\": \"Test Student\",\n      \"role\": \"customer\"\n    },\n    \"token\": \"eyJhbGciOiJIUzI1NiIs...\"\n  },\n  \"message\": \"Registration successful\"\n}\n```"
+    },
+    {
+      "file": "src/server.ts",
+      "line": 1,
+      "title": "Request Complete!",
+      "description": "## The Complete Journey\n\n```\n┌─────────────────────────────────────────────────────────┐\n│                    REQUEST FLOW                         │\n├─────────────────────────────────────────────────────────┤\n│                                                         │\n│  Client → Express App                                   │\n│           ↓                                             │\n│         express.json() (parse body)                     │\n│           ↓                                             │\n│         /api/v1 router                                  │\n│           ↓                                             │\n│         /auth router                                    │\n│           ↓                                             │\n│         POST /register route                            │\n│           ↓                                             │\n│         validate(registerSchema)                        │\n│           ↓                                             │\n│         register controller                             │\n│           ↓                                             │\n│         UserModel.save() → pre-save hook                │\n│           ↓                                             │\n│         generateToken()                                 │\n│           ↓                                             │\n│         sendSuccess() → Client                          │\n│                                                         │\n└─────────────────────────────────────────────────────────┘\n```\n\n---\n\n## 🎉 Tour Complete!\n\nYou've traced a request through the entire stack!"
+    }
+  ]
+}
